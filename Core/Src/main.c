@@ -21,7 +21,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +33,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define SWARM_UART_HANDLER				&huart1
+#define SWARM_UART_UART_TX_TIMEOUT		100
+#define SWARM_UART_RX_MAX_BUFF_SIZE		100
+#define SWARM_ANSWER_MAX_BUFF_SIZE		100
+#define SWARM_UART_TX_MAX_BUFF_SIZE		250
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
