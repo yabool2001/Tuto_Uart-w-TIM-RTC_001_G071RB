@@ -36,7 +36,6 @@
 #define UART_HANDLER				&huart2
 #define UART_TX_TIMEOUT				100
 #define UART_RX_MAX_BUFF_SIZE		100
-#define ANSWER_MAX_BUFF_SIZE		100
 #define UART_TX_MAX_BUFF_SIZE		250
 /* USER CODE END PD */
 
@@ -55,7 +54,6 @@ DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
 char             	uart_rx_buff[UART_RX_MAX_BUFF_SIZE] ;
-char             	answer_buff[ANSWER_MAX_BUFF_SIZE] ;
 char             	uart_tx_buff[UART_TX_MAX_BUFF_SIZE] ;
 const char*        	request = "request" ;
 const char* 		expected_answer = "answer" ;
@@ -122,9 +120,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while ( 1 )
   {
-	  HAL_Delay ( 3000 ) ;
 	  uart_comm ( request , expected_answer , i ) ;
 	  i++ ;
+	  HAL_PWR_EnterSTOPMode ( PWR_LOWPOWERREGULATOR_ON , PWR_STOPENTRY_WFI ) ;
 
     /* USER CODE END WHILE */
 
@@ -213,7 +211,7 @@ static void MX_RTC_Init(void)
 
   /** Enable the WakeUp
   */
-  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 5, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 10, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
   {
     Error_Handler();
   }
@@ -340,20 +338,27 @@ void uart_comm ( const char* r , const char* a , uint16_t n )
 	uint8_t expected_answer_come = 0 ;
 	sprintf ( uart_tx_buff , "%s%d" , r , n ) ;
 
+	receive_dma_uart () ;
 	for ( t = 0 ; t < 5 ; t++ )
 	{
 		tim14_on = 1 ;
 		HAL_TIM_Base_Start_IT ( &htim14 ) ;
 		answer_come = 0 ;
-		HAL_UARTEx_ReceiveToIdle_DMA ( UART_HANDLER , (uint8_t*) uart_rx_buff , UART_RX_MAX_BUFF_SIZE ) ;
-		__HAL_DMA_DISABLE_IT ( &hdma_usart2_rx, DMA_IT_HT ) ; //Disable Half Transfer interrupt.
-		HAL_UART_Transmit ( UART_HANDLER , (uint8_t*) uart_tx_buff ,  strlen ( uart_tx_buff ) , UART_TX_TIMEOUT ) ;
+
+		send_string_2_uart ( uart_tx_buff ) ;
 		while ( tim14_on )
 		{
 			if ( answer_come == 1 )
 			{
-				if ( strncmp ( answer_buff , a , strlen ( a ) ) == 0 )
+				if ( strncmp ( uart_rx_buff , a , strlen ( a ) ) == 0 )
+				{
 					expected_answer_come = 1 ;
+					// I want to show
+					// I can use uart_tx_buff because function is closing.
+					sprintf ( uart_tx_buff , "%s.%d" , uart_rx_buff , t ) ;
+					send_string_2_uart ( uart_tx_buff ) ;
+				}
+				receive_dma_uart () ;
 				break ;
 			}
 		}
@@ -374,17 +379,10 @@ void receive_dma_uart ()
 	__HAL_DMA_DISABLE_IT ( &hdma_usart2_rx, DMA_IT_HT ) ; //Disable Half Transfer interrupt.
 }
 
-void clean_buff ( char* buff , size_t l )
-{
-	for ( i = 0 ; i < l ; i++ )
-		uart_rx_buff[i] = 0 ;
-}
-
 void HAL_UARTEx_RxEventCallback ( UART_HandleTypeDef *huart , uint16_t Size )
 {
     if ( huart->Instance == USART2 )
     {
-		memcpy ( answer_buff , uart_rx_buff , Size ) ;
 		uart_rx_buff[Size] = '\0' ;
 		answer_come = 1 ;
     }
