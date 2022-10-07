@@ -69,7 +69,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_RTC_Init(void);
 static void MX_TIM14_Init(void);
 /* USER CODE BEGIN PFP */
-void				uart_comm 			( const char* , const char* , uint16_t ) ;
+uint8_t				uart_comm 			( const char* , const char* , uint16_t ) ;
 void				receive_dma_uart	( void ) ;
 HAL_StatusTypeDef 	send_string_2_uart	( char* ) ;
 /* USER CODE END PFP */
@@ -330,7 +330,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void uart_comm ( const char* r , const char* a , uint16_t n )
+uint8_t uart_comm ( const char* r , const char* a , uint16_t n )
 {
 	uint8_t t ;
 	uint8_t expected_answer_come = 0 ;
@@ -363,7 +363,7 @@ void uart_comm ( const char* r , const char* a , uint16_t n )
 		if ( expected_answer_come == 1 )
 			break ;
 	}
-	//clean_array ( swarm_answer_buff , SWARM_ANSWER_MAX_BUFF_SIZE ) ;
+	return expected_answer_come ;
 }
 
 HAL_StatusTypeDef send_string_2_uart ( char* s )

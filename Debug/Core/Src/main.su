@@ -5,7 +5,7 @@
 ../Core/Src/main.c:258:13:MX_USART2_UART_Init	8	static
 ../Core/Src/main.c:304:13:MX_DMA_Init	16	static
 ../Core/Src/main.c:322:13:MX_GPIO_Init	24	static
-../Core/Src/main.c:333:6:uart_comm	32	static
+../Core/Src/main.c:333:9:uart_comm	32	static
 ../Core/Src/main.c:369:19:send_string_2_uart	16	static
 ../Core/Src/main.c:374:6:receive_dma_uart	8	static
 ../Core/Src/main.c:380:6:HAL_UARTEx_RxEventCallback	16	static
