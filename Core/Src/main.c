@@ -33,11 +33,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SWARM_UART_HANDLER				&huart1
-#define SWARM_UART_UART_TX_TIMEOUT		100
-#define SWARM_UART_RX_MAX_BUFF_SIZE		100
-#define SWARM_ANSWER_MAX_BUFF_SIZE		100
-#define SWARM_UART_TX_MAX_BUFF_SIZE		250
+#define UART_HANDLER				&huart2
+#define UART_TX_TIMEOUT				100
+#define UART_RX_MAX_BUFF_SIZE		100
+#define ANSWER_MAX_BUFF_SIZE		100
+#define UART_TX_MAX_BUFF_SIZE		250
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -54,7 +54,14 @@ UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
-
+char             	uart_rx_buff[UART_RX_MAX_BUFF_SIZE] ;
+char             	answer_buff[ANSWER_MAX_BUFF_SIZE] ;
+char             	uart_tx_buff[UART_TX_MAX_BUFF_SIZE] ;
+const char*        	request = "request" ;
+const char* 		expected_answer = "answer" ;
+uint8_t				answer_come = 0 ;
+uint8_t				tim14_on ;
+uint8_t				i = 0 ;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,7 +72,9 @@ static void MX_USART2_UART_Init(void);
 static void MX_RTC_Init(void);
 static void MX_TIM14_Init(void);
 /* USER CODE BEGIN PFP */
-
+void				uart_comm 			( const char* , const char* , uint16_t ) ;
+void				receive_dma_uart	( void ) ;
+HAL_StatusTypeDef 	send_string_2_uart	( char* ) ;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -106,13 +115,17 @@ int main(void)
   MX_RTC_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-
+  __HAL_TIM_CLEAR_IT ( &htim14 , TIM_IT_UPDATE ) ; // żeby nie generować przerwania TIM6 od razu: https://stackoverflow.com/questions/71099885/why-hal-tim-periodelapsedcallback-gets-called-immediately-after-hal-tim-base-sta
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
+  while ( 1 )
   {
+	  HAL_Delay ( 3000 ) ;
+	  uart_comm ( request , expected_answer , i ) ;
+	  i++ ;
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -321,7 +334,70 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void uart_comm ( const char* r , const char* a , uint16_t n )
+{
+	uint8_t t ;
+	uint8_t expected_answer_come = 0 ;
+	sprintf ( uart_tx_buff , "%s%d" , r , n ) ;
 
+	for ( t = 0 ; t < 5 ; t++ )
+	{
+		tim14_on = 1 ;
+		HAL_TIM_Base_Start_IT ( &htim14 ) ;
+		answer_come = 0 ;
+		HAL_UARTEx_ReceiveToIdle_DMA ( UART_HANDLER , (uint8_t*) uart_rx_buff , UART_RX_MAX_BUFF_SIZE ) ;
+		__HAL_DMA_DISABLE_IT ( &hdma_usart2_rx, DMA_IT_HT ) ; //Disable Half Transfer interrupt.
+		HAL_UART_Transmit ( UART_HANDLER , (uint8_t*) uart_tx_buff ,  strlen ( uart_tx_buff ) , UART_TX_TIMEOUT ) ;
+		while ( tim14_on )
+		{
+			if ( answer_come == 1 )
+			{
+				if ( strncmp ( answer_buff , a , strlen ( a ) ) == 0 )
+					expected_answer_come = 1 ;
+				break ;
+			}
+		}
+		if ( expected_answer_come == 1 )
+			break ;
+	}
+	//clean_array ( swarm_answer_buff , SWARM_ANSWER_MAX_BUFF_SIZE ) ;
+}
+
+HAL_StatusTypeDef send_string_2_uart ( char* s )
+{
+	return HAL_UART_Transmit ( UART_HANDLER , (uint8_t *) s , strlen ( s ) , UART_TX_TIMEOUT ) ;
+}
+
+void receive_dma_uart ()
+{
+	HAL_UARTEx_ReceiveToIdle_DMA ( UART_HANDLER , (uint8_t*) uart_rx_buff , UART_RX_MAX_BUFF_SIZE ) ;
+	__HAL_DMA_DISABLE_IT ( &hdma_usart2_rx, DMA_IT_HT ) ; //Disable Half Transfer interrupt.
+}
+
+void clean_buff ( char* buff , size_t l )
+{
+	for ( i = 0 ; i < l ; i++ )
+		uart_rx_buff[i] = 0 ;
+}
+
+void HAL_UARTEx_RxEventCallback ( UART_HandleTypeDef *huart , uint16_t Size )
+{
+    if ( huart->Instance == USART2 )
+    {
+		memcpy ( answer_buff , uart_rx_buff , Size ) ;
+		uart_rx_buff[Size] = '\0' ;
+		answer_come = 1 ;
+    }
+}
+
+void HAL_TIM_PeriodElapsedCallback ( TIM_HandleTypeDef *htim )
+{
+	if ( htim->Instance == TIM14 )
+	{
+		tim14_on = 0 ;
+		HAL_TIM_Base_Stop_IT ( &htim14 ) ;
+	}
+}
 /* USER CODE END 4 */
 
 /**
