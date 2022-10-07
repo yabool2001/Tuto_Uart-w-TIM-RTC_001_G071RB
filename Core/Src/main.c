@@ -21,7 +21,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 /* USER CODE END Includes */
@@ -123,7 +122,6 @@ int main(void)
 	  uart_comm ( request , expected_answer , i ) ;
 	  i++ ;
 	  HAL_PWR_EnterSTOPMode ( PWR_LOWPOWERREGULATOR_ON , PWR_STOPENTRY_WFI ) ;
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -353,7 +351,7 @@ void uart_comm ( const char* r , const char* a , uint16_t n )
 				if ( strncmp ( uart_rx_buff , a , strlen ( a ) ) == 0 )
 				{
 					expected_answer_come = 1 ;
-					// I want to show
+					// I want to show how many tries was done to get expected answer
 					// I can use uart_tx_buff because function is closing.
 					sprintf ( uart_tx_buff , "%s.%d" , uart_rx_buff , t ) ;
 					send_string_2_uart ( uart_tx_buff ) ;
